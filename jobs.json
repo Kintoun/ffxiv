@@ -1,0 +1,67 @@
+{
+  "NIN" :
+  {
+    "score": 86.72,
+    "melee": true,
+    "physical": 100.0,
+    "damage":
+    {
+      "all": 1.667
+    }
+  },
+  "DRG":
+  {
+    "score": 86.71,
+    "melee": true,
+    "physical": 100.0,
+    "damage":
+    {
+      "all": 0.833,
+      "single": 0.138
+    }
+  },
+  "MNK":
+  {
+    "score": 93.38,
+    "melee": true,
+    "physical": 100.0,
+    "damage":
+    {
+      "physical": 0.833
+    }
+  },
+  "SAM":
+  {
+    "score": 97.60,
+    "melee": true,
+    "physical": 100.0
+  },
+  "RDM":
+  {
+    "score": 89.49,
+    "ranged": true,
+    "physical": 50.0,
+    "magical": 50.0,
+    "damage":
+    {
+      "physical": 1.0
+    }
+  },
+  "SMN":
+  {
+    "score": 95.18,
+    "ranged": true,
+    "magical": 100.0,
+    "damage":
+    {
+      "single": 0.1389,
+      "magical": 2.5
+    }
+  },
+  "BLM":
+  {
+    "score": 99.57,
+    "ranged": true,
+    "magical": 100.0
+  }
+}
