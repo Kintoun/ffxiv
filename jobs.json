@@ -4,7 +4,7 @@
     "score": 86.72,
     "melee": true,
     "physical": 100.0,
-    "damage":
+    "damage_buff":
     {
       "all": 1.667
     }
@@ -14,7 +14,7 @@
     "score": 86.71,
     "melee": true,
     "physical": 100.0,
-    "damage":
+    "damage_buff":
     {
       "all": 0.833,
       "single": 0.138
@@ -25,7 +25,7 @@
     "score": 93.38,
     "melee": true,
     "physical": 100.0,
-    "damage":
+    "damage_buff":
     {
       "physical": 0.833
     }
@@ -42,7 +42,7 @@
     "ranged": true,
     "physical": 50.0,
     "magical": 50.0,
-    "damage":
+    "damage_buff":
     {
       "physical": 1.0
     }
@@ -52,7 +52,7 @@
     "score": 95.18,
     "ranged": true,
     "magical": 100.0,
-    "damage":
+    "damage_buff":
     {
       "single": 0.1389,
       "magical": 2.5
