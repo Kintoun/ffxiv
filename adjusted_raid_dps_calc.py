@@ -66,75 +66,42 @@ def load_job_data():
     return None
 
 
-def run(fixed_job):
-    if fixed_job != "":
-        print "Running calc for {0} job".format(fixed_job)
-    else:
-        print "Running calc for all jobs"
+def calc_group_score(comp):
+    print "Running calc for group comp: {0} {1} {2}".format(comp[0].name, comp[1].name, comp[2].name)
 
-    job_data = load_job_data()
-    if not job_data:
-        raise RuntimeError('Unable to load job data.')
-    job_keys = job_data.keys()
+    total_adjusted_score = 0.0
+    # increase this jobs score by the bonuses from other group members
+    for n in range(3):
+        other_jobs = copy.deepcopy(comp)
+        this_job = other_jobs.pop(n)
 
-    # init our outputs
-    outputs = {}
-    for job_name in job_keys:
-        outputs[job_name] = Output(job_name, job_data[job_name]["score"])
-
-    # Create all combinations of 4 DPSers ('ABCD', 2) => AA AB AC AD BB BC BD CC CD DD
-    combinations = [list(x) for x in itertools.combinations_with_replacement(job_keys, 4)]
-    if fixed_job != "":
-        # filter further by ensuring each combination includes at least 1 of fixed_job
-        combinations = [x for x in combinations if fixed_job in x]
-
-    print "{0} group comp combinations generated".format(len(combinations))
-
-    # testing
-    # combinations = [['NIN', 'SAM', 'DRG', 'SMN']]
-
-    for comp in combinations:
-        source_jobs = []
-        for n in range(4):
-            job_name = comp[n]
-            job = Job(job_name, job_data[job_name])
-            source_jobs.append(job)
-
-        for n in range(4):
-            jobs = copy.deepcopy(source_jobs)
-            this_job = jobs.pop(n)
-
-            # remove external score increases from other jobs in comp
-            for other_job in jobs:
-                if other_job.damage_all != 0.0:
-                    this_job.score -= (other_job.damage_all / 100.0) * this_job.base_score
-                if this_job.physical_damage_percent > 0.0 and other_job.damage_physical != 0.0:
-                    # TODO: Mod by this_job physical_damage_percent
-                    this_job.score -= (other_job.damage_physical / 100.0) * this_job.base_score
-                if this_job.magical_damage_percent > 0.0 and other_job.damage_magical != 0.0:
-                    # TODO: Mod by this_job magical_damage_percent
-                    this_job.score -= (other_job.damage_magical / 100.0) * this_job.base_score
-
-            # increase this jobs score by increases it gives others
-            if this_job.damage_all != 0.0:
-                for other_job in jobs:
-                    this_job.score += (this_job.damage_all / 100.0) * other_job.base_score
-            if this_job.damage_physical > 0.0:
+        for other_job in other_jobs:
+            if other_job.damage_all != 0.0:
+                this_job.score += (other_job.damage_all / 100.0) * this_job.base_score
+            if other_job.damage_physical > 0.0 and this_job.physical_damage_percent > 0.0:
                 # TODO: Mod by this_job physical_damage_percent
-                for other_job in jobs:
-                    if other_job.physical_damage_percent > 0.0:
-                        this_job.score += (this_job.damage_physical / 100.0) * other_job.base_score
-            if this_job.damage_magical > 0.0:
+                this_job.score += (other_job.damage_physical / 100.0) * this_job.base_score
+            if other_job.damage_magical > 0.0 and this_job.magical_damage_percent > 0.0:
                 # TODO: Mod by this_job magical_damage_percent
-                for other_job in jobs:
-                    if other_job.magical_damage_percent > 0.0:
-                        this_job.score += (this_job.damage_magical / 100.0) * other_job.base_score
+                this_job.score += (other_job.damage_magical / 100.0) * this_job.base_score
+        total_adjusted_score += this_job.score
+    return total_adjusted_score
 
-            outputs[this_job.name].record_result(this_job.score, comp)
 
-    print "Results:"
-    for k, v in outputs.iteritems():
-        v.print_results()
+def comp_filter(comp):
+    # do not allow all phys damage
+    # do not allow all magical damage
+    phys_count = 0
+    mag_count = 0
+    for job in comp:
+        if job.name == 'RDM':
+            continue
+        if job.physical_damage_percent > 0.0:
+            phys_count += 1
+        if job.magical_damage_percent > 0.0:
+            mag_count += 1
+
+    return mag_count < 3 and phys_count < 3
 
 
 def main():
@@ -144,7 +111,31 @@ def main():
                         default='')
 
     args = parser.parse_args()
-    run(args.fixed_job)
+
+    job_data = load_job_data()
+    if not job_data:
+        raise RuntimeError('Unable to load job data.')
+
+    # create all combinations of 3 DPSers ('ABCD', 2) => AA AB AC AD BB BC BD CC CD DD
+    # we exclude the 4th DPS since that will always be reserved for a BRD/MCH and their calculations are too complex
+    combinations = [list(x) for x in itertools.combinations_with_replacement(job_data.keys(), 3)]
+    # convert to Job objs
+    combinations = [[Job(y, job_data[y]) for y in x] for x in combinations]
+    # certain comps are deemed "dumb", filter those out
+    combinations = [x for x in combinations if comp_filter(x)]
+    print "{0} group comp combinations generated".format(len(combinations))
+    # combinations = [x for x in combinations if fixed_job in x]
+    max_adjusted_score = 0.0
+    max_comp = []
+    for comp in combinations:
+        total_adjusted_score = calc_group_score(comp)
+        if total_adjusted_score > max_adjusted_score:
+            max_adjusted_score = total_adjusted_score
+            max_comp = comp
+        print 'Base score: {0}'.format(sum([x.base_score for x in comp]))
+        print 'Adjusted score: {0}'.format(total_adjusted_score)
+
+    print 'Max comp: {0} adjusted score: {1}'.format(' '.join(x.name for x in max_comp), max_adjusted_score)
 
 
 if __name__ == "__main__":
