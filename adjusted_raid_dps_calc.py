@@ -15,6 +15,8 @@ class Job(object):
     def __init__(self, name, json_obj):
         self.name = name
         self.base_score = json_obj["score"]
+        self.tank = json_obj["tank"] if "tank" in json_obj else False
+        self.healer = json_obj["healer"] if "healer" in json_obj else False
         self.melee = json_obj["melee"] if "melee" in json_obj else False
         self.ranged = json_obj["ranged"] if "ranged" in json_obj else False
         self.physical_damage_percent = json_obj["physical"] if "physical" in json_obj else 0.0
@@ -66,15 +68,17 @@ def load_job_data():
     return None
 
 
-def calc_group_score(comp):
-    print "Running calc for group comp: {0} {1} {2}".format(comp[0].name, comp[1].name, comp[2].name)
+def calc_group_score(dps_jobs, non_dps_jobs):
+    print "Running calc for group comp: {0} {1} {2}".format(dps_jobs[0].name, dps_jobs[1].name, dps_jobs[2].name)
 
     total_adjusted_score = 0.0
-    # increase this jobs score by the bonuses from other group members
-    for n in range(3):
-        other_jobs = copy.deepcopy(comp)
+    full_group = dps_jobs + non_dps_jobs
+    # for each member in the group
+    for n in range(len(full_group)):
+        other_jobs = copy.deepcopy(full_group)
         this_job = other_jobs.pop(n)
 
+        # increase this jobs score by the bonuses from other group members
         for other_job in other_jobs:
             if other_job.damage_all != 0.0:
                 this_job.score += (other_job.damage_all / 100.0) * this_job.base_score
@@ -86,6 +90,10 @@ def calc_group_score(comp):
                 this_job.score += (other_job.damage_magical / 100.0) * this_job.base_score
         total_adjusted_score += this_job.score
     return total_adjusted_score
+
+
+def is_dps_job(job_name):
+    return job_name != 'PLD' and job_name != 'WAR' and job_name != 'SCH' and job_name != 'AST'
 
 
 def comp_filter(comp):
@@ -116,19 +124,25 @@ def main():
     if not job_data:
         raise RuntimeError('Unable to load job data.')
 
+    # Gather the DPS jobs only
+    dps_job_keys = [x for x in job_data.keys() if is_dps_job(x)]
+
     # create all combinations of 3 DPSers ('ABCD', 2) => AA AB AC AD BB BC BD CC CD DD
     # we exclude the 4th DPS since that will always be reserved for a BRD/MCH and their calculations are too complex
-    combinations = [list(x) for x in itertools.combinations_with_replacement(job_data.keys(), 3)]
+    combinations = [list(x) for x in itertools.combinations_with_replacement(dps_job_keys, 3)]
     # convert to Job objs
     combinations = [[Job(y, job_data[y]) for y in x] for x in combinations]
     # certain comps are deemed "dumb", filter those out
     combinations = [x for x in combinations if comp_filter(x)]
     print "{0} group comp combinations generated".format(len(combinations))
+
+    non_dps_jobs = [Job(x, job_data[x]) for x in job_data.keys() if not is_dps_job(x)]
+
     # combinations = [x for x in combinations if fixed_job in x]
     max_adjusted_score = 0.0
     max_comp = []
     for comp in combinations:
-        total_adjusted_score = calc_group_score(comp)
+        total_adjusted_score = calc_group_score(comp, non_dps_jobs)
         if total_adjusted_score > max_adjusted_score:
             max_adjusted_score = total_adjusted_score
             max_comp = comp

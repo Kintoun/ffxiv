@@ -63,5 +63,33 @@
     "score": 99.57,
     "ranged": true,
     "magical": 100.0
+  },
+  "PLD":
+  {
+    "score": 62.77,
+    "tank": true,
+    "melee": true,
+    "physical": 100.0
+  },
+  "WAR":
+  {
+    "score": 66.16,
+    "tank": true,
+    "melee": true,
+    "physical": 100.0
+  },
+  "SCH":
+  {
+    "score": 44.94,
+    "healer": true,
+    "ranged": true,
+    "magical": 100.0
+  },
+  "AST":
+  {
+    "score": 44.92,
+    "healer": true,
+    "ranged": true,
+    "magical": 100.0
   }
 }
