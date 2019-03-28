@@ -19,9 +19,9 @@ class Job(object):
         self.ranged = json_obj["ranged"] if "ranged" in json_obj else False
         self.physical_damage_percent = json_obj["physical"] if "physical" in json_obj else 0.0
         self.magical_damage_percent = json_obj["magical"] if "magical" in json_obj else 0.0
-        self.slashing_debuff = json_obj["debuff"] == "slashing" if "debuff" in json_obj else False
-        self.piercing_debuff = json_obj["debuff"] == "piercing" if "debuff" in json_obj else False
-        self.blunt_debuff = json_obj["debuff"] == "blunt" if "debuff" in json_obj else False
+        self.applies_slashing_debuff = json_obj["applies_debuff"] == "slashing" if "applies_debuff" in json_obj else False
+        self.applies_piercing_debuff = json_obj["applies_debuff"] == "piercing" if "applies_debuff" in json_obj else False
+        self.applies_blunt_debuff = json_obj["applies_debuff"] == "blunt" if "applies_debuff" in json_obj else False
         self.main_stat = json_obj["main_stat"] if "main_stat" in json_obj else ""
         self.damage_type = json_obj["type"] if "type" in json_obj else ""
         self.damage_buff_all = 0.0
@@ -66,8 +66,8 @@ def calc_group_score(dps_jobs, non_dps_jobs):
     full_group = copy.deepcopy(dps_jobs) + copy.deepcopy(non_dps_jobs)
     # WAR tank always provides this and is a locked spot in the group
     has_slashing_debuff = True
-    has_piercing_debuff = len(list(filter(lambda job: job.piercing_debuff, dps_jobs))) > 0
-    has_blunt_debuff = len(list(filter(lambda job: job.blunt_debuff, dps_jobs))) > 0
+    has_piercing_debuff = len(list(filter(lambda job: job.applies_piercing_debuff, dps_jobs))) > 0
+    has_blunt_debuff = len(list(filter(lambda job: job.applies_blunt_debuff, dps_jobs))) > 0
     has_str_buff = len(list(filter(lambda job: job.main_stat == "STR", dps_jobs))) > 0
     has_dex_buff = len(list(filter(lambda job: job.main_stat == "DEX", dps_jobs))) > 0
     has_int_buff = len(list(filter(lambda job: job.main_stat == "INT", dps_jobs))) > 0
@@ -75,8 +75,10 @@ def calc_group_score(dps_jobs, non_dps_jobs):
     for n in range(len(full_group)):
         this_job = full_group[n]
 
-        # increase this jobs score by the bonuses from other group members (includes self, bit hacky)
+        # increase this jobs score by the bonuses from other group members (exclude self)
         for other_job in full_group:
+            if this_job == other_job:
+                continue
             if other_job.damage_buff_all != 0.0:
                 this_job.score += (other_job.damage_buff_all / 100.0) * this_job.base_score
             if other_job.damage_buff_physical > 0.0 and this_job.physical_damage_percent > 0.0:
@@ -88,12 +90,12 @@ def calc_group_score(dps_jobs, non_dps_jobs):
         if this_job.damage_buff_single:
             this_job.score += (this_job.damage_buff_single / 100.0) * this_job.base_score
 
-        # increase score if debuff exists
-        if has_slashing_debuff and this_job.damage_type == "slashing":
+        # increase score if debuff exists, but not if we cause the debuff (since that's already rolled into score)
+        if has_slashing_debuff and this_job.damage_type == "slashing" and not this_job.applies_slashing_debuff:
             this_job.score += 0.10 * this_job.base_score * (this_job.physical_damage_percent / 100.0)
-        elif has_piercing_debuff and this_job.damage_type == "piercing":
+        elif has_piercing_debuff and this_job.damage_type == "piercing" and not this_job.applies_piercing_debuff:
             this_job.score += 0.05 * this_job.base_score * (this_job.physical_damage_percent / 100.0)
-        elif has_blunt_debuff and this_job.damage_type == "blunt":
+        elif has_blunt_debuff and this_job.damage_type == "blunt" and not this_job.applies_blunt_debuff:
             this_job.score += 0.10 * this_job.base_score * (this_job.physical_damage_percent / 100.0)
 
         # apply party main stat bonus

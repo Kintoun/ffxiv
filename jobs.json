@@ -5,7 +5,7 @@
     "melee": true,
     "type": "slashing",
     "main_stat": "DEX",
-    "debuff": "slashing",
+    "applies_debuff": "slashing",
     "physical": 100.0,
     "damage_buff":
     {
@@ -18,7 +18,7 @@
     "melee": true,
     "type": "piercing",
     "main_stat": "STR",
-    "debuff": "piercing",
+    "applies_debuff": "piercing",
     "physical": 100.0,
     "damage_buff":
     {
@@ -32,7 +32,7 @@
     "melee": true,
     "type": "blunt",
     "main_stat": "DEX",
-    "debuff": "blunt",
+    "applies_debuff": "blunt",
     "physical": 100.0,
     "damage_buff":
     {
@@ -43,8 +43,9 @@
   {
     "score": 97.60,
     "melee": true,
+    "type": "slashing",
     "main_stat": "STR",
-    "debuff": "slashing",
+    "applies_debuff": "slashing",
     "physical": 100.0
   },
   "RDM":
@@ -95,7 +96,7 @@
     "melee": true,
     "main_stat": "VIT",
     "type": "slashing",
-    "debuff": "slashing",
+    "applies_debuff": "slashing",
     "physical": 100.0
   },
   "SCH":
