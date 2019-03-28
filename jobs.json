@@ -3,6 +3,9 @@
   {
     "score": 86.72,
     "melee": true,
+    "type": "slashing",
+    "main_stat": "DEX",
+    "debuff": "slashing",
     "physical": 100.0,
     "damage_buff":
     {
@@ -13,6 +16,9 @@
   {
     "score": 86.71,
     "melee": true,
+    "type": "piercing",
+    "main_stat": "STR",
+    "debuff": "piercing",
     "physical": 100.0,
     "damage_buff":
     {
@@ -24,6 +30,9 @@
   {
     "score": 93.38,
     "melee": true,
+    "type": "blunt",
+    "main_stat": "DEX",
+    "debuff": "blunt",
     "physical": 100.0,
     "damage_buff":
     {
@@ -34,12 +43,16 @@
   {
     "score": 97.60,
     "melee": true,
+    "main_stat": "STR",
+    "debuff": "slashing",
     "physical": 100.0
   },
   "RDM":
   {
     "score": 89.49,
     "ranged": true,
+    "main_stat": "INT",
+    "type": "piercing",
     "physical": 50.0,
     "magical": 50.0,
     "damage_buff":
@@ -51,6 +64,7 @@
   {
     "score": 95.18,
     "ranged": true,
+    "main_stat": "INT",
     "magical": 100.0,
     "damage_buff":
     {
@@ -62,6 +76,7 @@
   {
     "score": 99.57,
     "ranged": true,
+    "main_stat": "INT",
     "magical": 100.0
   },
   "PLD":
@@ -69,6 +84,8 @@
     "score": 62.77,
     "tank": true,
     "melee": true,
+    "main_stat": "VIT",
+    "type": "slashing",
     "physical": 100.0
   },
   "WAR":
@@ -76,6 +93,9 @@
     "score": 66.16,
     "tank": true,
     "melee": true,
+    "main_stat": "VIT",
+    "type": "slashing",
+    "debuff": "slashing",
     "physical": 100.0
   },
   "SCH":

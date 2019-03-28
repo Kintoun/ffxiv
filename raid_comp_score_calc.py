@@ -19,6 +19,11 @@ class Job(object):
         self.ranged = json_obj["ranged"] if "ranged" in json_obj else False
         self.physical_damage_percent = json_obj["physical"] if "physical" in json_obj else 0.0
         self.magical_damage_percent = json_obj["magical"] if "magical" in json_obj else 0.0
+        self.slashing_debuff = json_obj["debuff"] == "slashing" if "debuff" in json_obj else False
+        self.piercing_debuff = json_obj["debuff"] == "piercing" if "debuff" in json_obj else False
+        self.blunt_debuff = json_obj["debuff"] == "blunt" if "debuff" in json_obj else False
+        self.main_stat = json_obj["main_stat"] if "main_stat" in json_obj else ""
+        self.damage_type = json_obj["type"] if "type" in json_obj else ""
         self.damage_buff_all = 0.0
         self.damage_buff_physical = 0.0
         self.damage_buff_magical = 0.0
@@ -59,6 +64,13 @@ def calc_group_score(dps_jobs, non_dps_jobs):
     total_base_score = 0.0
     total_adjusted_score = 0.0
     full_group = copy.deepcopy(dps_jobs) + copy.deepcopy(non_dps_jobs)
+    # WAR tank always provides this and is a locked spot in the group
+    has_slashing_debuff = True
+    has_piercing_debuff = len(list(filter(lambda job: job.piercing_debuff, dps_jobs))) > 0
+    has_blunt_debuff = len(list(filter(lambda job: job.blunt_debuff, dps_jobs))) > 0
+    has_str_buff = len(list(filter(lambda job: job.main_stat == "STR", dps_jobs))) > 0
+    has_dex_buff = len(list(filter(lambda job: job.main_stat == "DEX", dps_jobs))) > 0
+    has_int_buff = len(list(filter(lambda job: job.main_stat == "INT", dps_jobs))) > 0
     # for each member in the group
     for n in range(len(full_group)):
         this_job = full_group[n]
@@ -75,6 +87,22 @@ def calc_group_score(dps_jobs, non_dps_jobs):
         # this seems weird, but if we have any single target score increases just apply it to ourselves for simplicity
         if this_job.damage_buff_single:
             this_job.score += (this_job.damage_buff_single / 100.0) * this_job.base_score
+
+        # increase score if debuff exists
+        if has_slashing_debuff and this_job.damage_type == "slashing":
+            this_job.score += 0.10 * this_job.base_score * (this_job.physical_damage_percent / 100.0)
+        elif has_piercing_debuff and this_job.damage_type == "piercing":
+            this_job.score += 0.05 * this_job.base_score * (this_job.physical_damage_percent / 100.0)
+        elif has_blunt_debuff and this_job.damage_type == "blunt":
+            this_job.score += 0.10 * this_job.base_score * (this_job.physical_damage_percent / 100.0)
+
+        # apply party main stat bonus
+        if has_str_buff and this_job.main_stat == "STR" or this_job.main_stat == "VIT":
+            this_job.score += 0.03 * this_job.base_score
+        elif has_dex_buff and this_job.main_stat == "DEX":
+            this_job.score += 0.03 * this_job.base_score
+        elif has_int_buff and this_job.main_stat == "INT":
+            this_job.score += 0.03 * this_job.base_score
 
         total_base_score += this_job.base_score
         total_adjusted_score += this_job.score
