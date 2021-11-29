@@ -1,11 +1,13 @@
 ;;;;;;;; Instructions ;;;;;;;
-; HOW TO RUN:
+; HOW TO USE:
 ; If ahk file association is setup, double click this script to launch it
 ; Control + F12 to open UI.
-; Control + F12 when already running will stop a craft (same as Stop button)
 ; Select an item from the dropdown and click one of the buttons to start the script
+; PREREQUESITES:
 ; The script expects that you have your in-game crafting UI open (hotkey N) with the desired item selected
-; Using HQ materials is not supported
+; If using HQ, ALWAYS ensure your in-game "active selection" is an item in the crafting list area
+
+; Incredibly useful tool for determing rotations/macros/durations - https://ffxivteamcraft.com/simulator
 
 ; Actions:
 ; Do Once - Executes dropdown item once then stops.
@@ -14,12 +16,15 @@
 ; Stop - Stops execution of the dropdown item.
 ; Run Simulation - Do Once in simulation mode. Will display commands in message box. If notepad is running commands will be sent there
 
-; HOW TO ADD ITEMS TO DROPDOWN:
-; Find DropDownList in the code below and add your item to the list
-; In the section below labeled as "Crafts" make a new entry with the same name
+; FAQ:
+; Help I selected HQ mats and the craft won't start!
+;	See above. The script expects your in-game "active selection" to start in the crafting list area NOT the actual craft where material selection is done.
+;	Simply left click in-game on the craft list area then try again
 
 ; TODO:
-; Add support for HQ materials
+; Find a way to navigate even if user selected HQ mats
+
+#Include JSON.ahk
 
 ;;;;;;;;;; Hotkeys ;;;;;;;;;;
 ^F12::
@@ -34,13 +39,13 @@ Simulation := false ; no need to set here, controlled via UI
 
 class Action
 {
-	hotkey := "z"
-	delay := 0
+	hotkey := ""
+	duration := 0
 	
 	__New(h, d)
 	{
 		this.hotkey := h
-		this.delay := d
+		this.duration := d * 1000
 	}
 }
 
@@ -48,52 +53,28 @@ class Action
 ;;;;;;;;;;; Crafts ;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Macros := {}
-CraftMap := {}
-
-; In-game Macros - waits and skills are handled in-game
-; Action first parameter is hotkey, second parameter is summed waits in macro
-Macros["Tofu Sugar Vinegar 1"] := new Action("7", 26000)
-Macros["Tofu Sugar Vinegar 2"] := new Action("8", 19000)
-Macros["Vinegar 1"] := new Action("7", 37000)
-Macros["Vinegar 2"] := new Action("8", 6000)
-Macros["Miso Dengaku 1"] := new Action("3", 38000)
-Macros["Miso Dengaku 2"] := new Action("4", 17000)
-Macros["Jhammel Moussaka 1"] := new Action("3", 38000)
-Macros["Jhammel Moussaka 2"] := new Action("4", 20000)
-Macros["Yaki Amberjack EggFoo 1"] := new Action("1", 38000)
-Macros["Yaki Amberjack EggFoo 2"] := new Action("2", 17000)
-Macros["Persimmon 1"] := new Action("3", 37000)
-Macros["Persimmon 2"] := new Action("4", 29000)
-Macros["Cottonseed Oil"] := new Action("5", 40000)
-Macros["Pork Kakuni 1"] := new Action("7", 37000)
-Macros["Pork Kakuni 2"] := new Action("8", 37000)
-
-Macros["Infusion 1"] := new Action("1", 38000)
-Macros["Infusion 2"] := new Action("2", 22000)
-
-Macros["Kopp Nugget 1"] := new Action("1", 24000)
-Macros["Kopp Nugget 2"] := new Action("2", 18000)
-Macros["Kopp Ingot 2"] := new Action("2", 20000)
-Macros["Kopp Ingot 2"] := new Action("5", 18000)
-
-;CraftMap[""] := [" 1", " 2"]
-CraftMap["Tofu Sugar Vinegar"] := ["Tofu Sugar Vinegar 1", "Tofu Sugar Vinegar 2"]
-CraftMap["Vinegar"] := ["Vinegar 1", "Vinegar 2"]
-CraftMap["Miso Dengaku"] := ["Miso Dengaku 1", "Miso Dengaku 2"]
-CraftMap["Jhammel Moussaka"] := ["Jhammel Moussaka 1", "Jhammel Moussaka 2"]
-CraftMap["Yaki Amberjack EggFoo"] := ["Yaki Amberjack EggFoo 1", "Yaki Amberjack EggFoo 2"]
-CraftMap["Persimmon"] := ["Persimmon 1", "Persimmon 2"]
-CraftMap["Cottonseed Oil"] := ["Cottonseed Oil"]
-CraftMap["Pork Kakuni"] := ["Pork Kakuni 1", "Pork Kakuni 2"]
-CraftMap["Infusion"] := ["Infusion 1", "Infusion 2"]
-
-CraftMap["Kopp Nugget"] := ["Kopp Nugget 1", "Kopp Nugget 2"]
-CraftMap["Kopp Ingot"] := ["Kopp Nugget 1", "Kopp Ingot 2"]
+; Example Json format
+TestRawJson =
+(
+{
+	"3.5* 70D": {
+		"macros": [
+			{
+				"hotkey": "7",
+				"duration": 39
+			},
+			{
+				"hotkey": "8",
+				"duration": 11
+			}
+		]
+	},
+}
+)
 			
-;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;; Main ;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;; Main ;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; If we're already running, then hotkey again means STOP
 if KeepRunning
@@ -102,40 +83,78 @@ if KeepRunning
     return
 }
 KeepRunning := true
+Running := false
 ShowDialog()
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;; Functions ;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;; Functions ;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+LoadCrafts()
+{
+	global
+
+	if Running
+	{
+		MsgBox % "Unable to Reload JSON while running!"
+		return
+	}
+
+	Fileread, rawJSON, crafts.json
+	if ErrorLevel
+	{
+		MsgBox % "'crafts.json' file not found!"
+		return
+	}
+
+	Crafts := JSON.Load(rawJSON)
+
+	craftables := ""
+	for k, v in Crafts
+		craftables .= k "|"
+
+	GuiControl,, CraftChoice, |%craftables%
+}
 
 ShowDialog()
 {	
 	global
+
+	LoadCrafts()
 	
-	Gui, Add, DropDownList, vCraftChoice, Vinegar|Cottonseed Oil|Yaki Amberjack EggFoo|Miso Dengaku|Jhammel Moussaka|Persimmon|Kopp Nugget|Kopp Ingot|Infusion|Pork Kakuni
-	Gui, Add, Button, default xm section, Do Once
-	Gui, Add, Button, ys, Repeat
+	Gui, Margin, 4, 7
+	Gui, Add, Text, xm ym w0 h0 section, dummy ; dummy element to enable finer pos control of next element
+	Gui, Add, Text, ys+3, Recipe:
+	Gui, Add, DropDownList, ys w150 vCraftChoice, %craftables%
+	Gui, Add, Text, ys+3, Iterations:
+	Gui, Add, Edit, ys w50
+	Gui, Add, UpDown, vIterSpinner Range0-999, 0
+	Gui, Add, Button, default xm section, Craft
 	Gui, Add, Button, ys, Pause
 	Gui, Add, Button, ys, Stop
 	Gui, Add, Button, ys, Run Simulation
+	Gui, Add, Button, ys, Reload Crafts
+	Gui, Add, Text, xm section w200 vStatusText, Status: Idle
+	;Gui, Add, Progress, ys w100 h10 cBlue vProgressBar, 10
 	
 	Gui, Show,, Crafting Helper
 	return
 	
 	ButtonOK:
-	ButtonDoOnce:
+	ButtonCraft:
 	Gui, Submit, NoHide
-	Run(CraftChoice, 1)
+	Run(CraftChoice, IterSpinner)
 	return
 	
-	ButtonRepeat:
+	ButtonReloadCrafts:
 	Gui, Submit, NoHide
-	Run(CraftChoice, 9999)
+	LoadCrafts()
+	GuiControl,, StatusText, Status: Crafts Reloaded
 	return
-	
+
 	ButtonRunSimulation:
 	Gui, Submit, NoHide
-	Run(CraftChoice, 1, true)
+	Run(CraftChoice, IterSpinner, true)
 	return
 	
 	ButtonPause:
@@ -153,18 +172,26 @@ ShowDialog()
 Run(CraftChoice, Iterations, RunSimulation = false)
 {
 	global
-	
-	if (Iterations < 1)
+
+	if not CraftChoice
 	{
-		MsgBox % "Invalid parameters"
+		MsgBox % "No craft selected from dropdown!"
 		return
 	}
 
+	Running := true
 	KeepRunning := true
 	Simulation := RunSimulation
+
+	if (Iterations <= 0)
+	{
+		GuiControl,,StatusText,Status: Running forever
+	}
 	
+	;if (1)
 	if (Simulation)
 	{
+		; if you're running Notepad.exe hotkeys will be output to it as if it was FFXIV
 		ProcessName := "notepad.exe"
 	}
 	else
@@ -172,12 +199,17 @@ Run(CraftChoice, Iterations, RunSimulation = false)
 		ProcessName := "ffxiv_dx11.exe"
 	}
 	
-	Tooltip Running
-	Sleep 1000
-	Tooltip
-	
-	Loop %Iterations%
+	Loop
 	{
+		; infinite loop at 0, else honor Iterations
+		if (Iterations > 0 and A_Index > Iterations)
+        	break
+
+		if (Iterations > 0)
+		{
+			GuiControl,, StatusText, Status: Running %A_Index%/%Iterations%
+		}
+
 		DoOnce(CraftChoice)
 		
 		if Simulation or not KeepRunning
@@ -187,20 +219,29 @@ Run(CraftChoice, Iterations, RunSimulation = false)
 
 		if Simulation or not KeepRunning
 			break
+
+		if (Iterations > 0)
+		{
+			;progress :=  ROUND((A_Index / Iterations) * 100.0)
+			;GuiControl,, ProgressBar, progress
+		}
 	}
 	
+	Running := false
+	KeepRunning := false
+	GuiControl,, StatusText, Status: Complete
 	Tooltip Done
 	Sleep 1000
 	Tooltip
-	KeepRunning := false
 	return
 }
 
 DoOnce(CraftChoice)
 {
-	global KeepRunning, Simulation
-
 	BasicCraft(CraftChoice)
+
+	; Accept for collectable
+	; SendToGame("{Numpad0}", 500)
 }
 
 BasicCraft(CraftChoice)
@@ -213,18 +254,19 @@ BasicCraft(CraftChoice)
 		Sleep 1500
 	}
 	
-	Craft := CraftMap[CraftChoice]
-	hotkeys := ""
+	Craft := Crafts[CraftChoice].macros
+	actionLog := ""
 	Loop % Craft.MaxIndex()
 	{
-		if KeepRunning
-			hotkeys := hotkeys ExecuteAction(Craft[A_Index])
+		action := new Action(Craft[A_Index].hotkey, Craft[A_Index].duration)
+		ExecuteAction(action)
+		actionLog .= action.hotkey " <wait." action.duration ">"
 	}
 
 	if (Simulation)
 	{
 		SendToGame("{Enter}", 100) ; newline for Notepad to separate simulations
-		MsgBox % "Simulation complete: " hotkeys
+		MsgBox % "Simulation complete: " actionLog
 	}
 	
 	return
@@ -232,10 +274,6 @@ BasicCraft(CraftChoice)
 
 StartSynthesis()
 {
-	; Confirm collectable
-	;SendToGame("{Numpad0}", 1000)
-	;SendToGame("{Numpad0}", 1000)
-
 	; Send "UI confirm" messages to select item and start crafting process
 	SendToGame("{Numpad0}", 750)
 	SendToGame("{Numpad0}", 1000)
@@ -245,43 +283,23 @@ StartSynthesis()
 	SendToGame("{Numpad0}", 1000)	
 }
 
-SetHQCount(HQNum = 0)
-{
-	; Move cursor to ingredient column
-	SendToGame("{Numpad8}", 500)
-	SendToGame("{Numpad6}", 500)
-	SendToGame("{Numpad6}", 500)
-	
-	; Hit up arrow for requested number of HQ ingredients
-	Loop %HQNum%
-	{
-		SendToGame("{Numpad0}", 500)
-	}
-	
-	SendToGame("{Numpad2}", 500)
-}
-
-ExecuteAction(name)
+ExecuteAction(action)
 {
 	global 
 	
-	Macro := Macros[name]
-	
 	if (Simulation)
 	{
-		SendToGame(Macro.hotkey, 100)
+		SendToGame(action.hotkey, 100)
 	}
 	else
 	{
-		SendToGame(Macro.hotkey, Macro.delay)
+		SendToGame(action.hotkey, action.duration)
 	}
-	
-	return Macro.hotkey " <wait." Macro.delay ">"
 }
 
 SendToGame(KeyToSend, SleepTime)
 {
-	global ProcessName
+	global
 	; ahk_exe searches by exe name e.g. Task Manager process name
 	ControlSend,, %KeyToSend%, ahk_exe %ProcessName%
 	Sleep %SleepTime%
@@ -289,10 +307,8 @@ SendToGame(KeyToSend, SleepTime)
 
 SignalStop()
 {
-	global KeepRunning
+	global
 	
 	KeepRunning := false
-	Tooltip Stopping after this loop
-	Sleep 2000
-	Tooltip
+	GuiControl,, StatusText, Status: Cancelling after this iteration
 }
